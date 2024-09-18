@@ -6,11 +6,12 @@ import (
 	urlshort "gophercises/url-shortener/urlshort"
 	"net/http"
 	"os"
+	"strings"
 )
 
 func main() {
-	yml := flag.String("yaml", "", "yaml file with urls, an array of entries, each with keys url and path")
-	json := flag.String("json", "", "json file with urls, an array of entries, each with keys url and path")
+	var path string
+	flag.StringVar(&path, "file", "", "input urls. can be in json or yaml, an array of entries, each with keys url and path")
 	flag.Parse()
 
 	mux := defaultMux()
@@ -24,30 +25,30 @@ func main() {
 	}
 	mapHandler := urlshort.MapHandler(pathsToUrls, mux)
 
-	//	// Build the YAMLHandler using the mapHandler as the
-	// fallback
-
 	var dataHandler http.HandlerFunc
 
-	switch {
-	case *json != "":
-		data, err := readFile(*json)
+	if path != "" {
+		data, err := readFile(path)
 		if err != nil {
-			fmt.Printf("error reading file %s: %v\n", *json, err)
+			fmt.Printf("error reading file %s: %v\n", path, err)
 		}
-		dataHandler, err = urlshort.JsonHandler(data, mapHandler)
+
+		spl := strings.Split(path, ".")
+		ext := spl[len(spl)-1]
+
+		switch ext {
+		case "json":
+			fmt.Println("Json")
+			dataHandler, err = urlshort.JsonHandler(data, mapHandler)
+		case "yml", "yaml":
+			fmt.Println("Yaml")
+			dataHandler, err = urlshort.YamlHandler(data, mapHandler)
+		}
+
 		if err != nil {
-			fmt.Printf("error creating factory: %v\n", err)
+			panic(fmt.Sprintf("error creating handler: %v\n", err))
 		}
-	case *yml != "":
-		data, err := readFile(*yml)
-		if err != nil {
-			fmt.Printf("error reading file %s: %v\n", *yml, err)
-		}
-		dataHandler, err = urlshort.YamlHandler(data, mapHandler)
-		if err != nil {
-			fmt.Printf("error creating factory: %v\n", err)
-		}
+
 	}
 
 	fmt.Println("Starting the server on :8080")
@@ -68,19 +69,25 @@ func hello(w http.ResponseWriter, r *http.Request) {
 }
 
 func readFile(path string) ([]byte, error) {
-	var ret []byte
-
 	file, err := os.Open(path)
-
 	if err != nil {
-		return nil, fmt.Errorf("error reading file %s: %v\n", path, err)
+		return nil, fmt.Errorf("%v while reading file %s", path, err)
+	}
+	defer file.Close()
+
+	info, err := file.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("couldn't get file metadata %v", err)
 	}
 
-	defer file.Close()
+	// if you don't set the initial size you get
+	// unexpected end of JSON input
+	// https://stackoverflow.com/a/65414065
+	ret := make([]byte, info.Size())
 
 	n, err := file.Read(ret)
 	if err != nil {
-		return nil, fmt.Errorf("error %v reading %s the file. read %d bytes", err, path, n)
+		return nil, fmt.Errorf("%v while reading %s. read %d bytes", err, path, n)
 	}
 
 	return ret, nil
