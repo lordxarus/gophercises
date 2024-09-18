@@ -77,22 +77,32 @@ func init() {
 	defaultTmpl = template.Must(template.New("").Parse(defaultTmplHtml))
 }
 
-// if you aren't exporting a type don't return that type explicitly
-// it won't export into the docs
-// godoc -http :3030
-func NewHandler(s Story, t *template.Template) http.Handler {
-	if t == nil {
-		t = defaultTmpl
-	}
-	return handler{
-		s,
-		t,
+type HandlerOption func(h *handler)
+
+// functional options https://dave.cheney.net/2014/10/17/functional-options-for-friendly-apis
+func WithTemplate(t *template.Template) HandlerOption {
+	return func(h *handler) {
+		h.t = t
 	}
 }
 
 type handler struct {
 	s Story
 	t *template.Template
+}
+
+// if you aren't exporting a type don't return that type explicitly
+// it won't export into the docs
+// godoc -http :3030
+func NewHandler(s Story, opts ...HandlerOption) http.Handler {
+	h := handler{
+		s,
+		defaultTmpl,
+	}
+	for _, opt := range opts {
+		opt(&h)
+	}
+	return h
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
