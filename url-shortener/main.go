@@ -38,10 +38,8 @@ func main() {
 
 		switch ext {
 		case "json":
-			fmt.Println("Json")
 			dataHandler, err = urlshort.JsonHandler(data, mapHandler)
 		case "yml", "yaml":
-			fmt.Println("Yaml")
 			dataHandler, err = urlshort.YamlHandler(data, mapHandler)
 		}
 
