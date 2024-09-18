@@ -1,7 +1,7 @@
 package urlshort
 
 import (
-	"fmt"
+	"encoding/json"
 	"net/http"
 
 	"gopkg.in/yaml.v2"
@@ -11,6 +11,14 @@ type pair struct {
 	Path string `yaml:"path"`
 	URL  string `yaml:"url"`
 }
+
+// Enum represents the possible options for a certain property.
+type DataHandlerType int
+
+const (
+	Json DataHandlerType = iota
+	Yaml
+)
 
 // MapHandler will return an http.HandlerFunc (which also
 // implements http.Handler) that will attempt to map any
@@ -24,7 +32,6 @@ func MapHandler(pathsToUrls map[string]string, fallback http.Handler) http.Handl
 		if dest, ok := pathsToUrls[path]; ok {
 			http.Redirect(w, r, dest, http.StatusFound)
 		} else {
-			fmt.Printf("path %s not found, redirecting %s to fallback\n", path, r.RemoteAddr)
 			fallback.ServeHTTP(w, r)
 		}
 	}
@@ -46,9 +53,18 @@ func MapHandler(pathsToUrls map[string]string, fallback http.Handler) http.Handl
 //
 // See MapHandler to create a similar http.HandlerFunc via
 // a mapping of paths to urls.
-func YAMLHandler(yml []byte, fallback http.Handler) (http.HandlerFunc, error) {
+func JsonHandler(in []byte, fallback http.Handler) (http.HandlerFunc, error) {
 	var parsed []pair
-	err := yaml.Unmarshal(yml, &parsed)
+	err := json.Unmarshal(in, &parsed)
+	if err != nil {
+		return nil, err
+	}
+	return MapHandler(pairToMap(parsed), fallback), nil
+}
+
+func YamlHandler(in []byte, fallback http.Handler) (http.HandlerFunc, error) {
+	var parsed []pair
+	err := yaml.Unmarshal(in, &parsed)
 	if err != nil {
 		return nil, err
 	}

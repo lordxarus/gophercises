@@ -1,0 +1,11 @@
+
+[
+    {
+      "path": "/json-docs",
+      "url": "https://pkg.go.dev/encoding/json"
+    },
+    {
+      "path": "/json-yt",
+      "url": "https://youtube.com"
+    }
+  ]
