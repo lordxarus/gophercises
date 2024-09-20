@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"gophercises/html-link-parser/test-html/link"
+	link "gophercises/html-link-parser/link"
 	"io"
 	"net/http"
 	"net/url"
@@ -20,34 +20,72 @@ import (
 */
 func main() {
 	urlFlag := flag.String("url", "https://gophercises.com", "the url that you want to build a sitemap for")
+	maxDepth := flag.Int("depth", 3, "the maximum number of links deep to traverse")
 	flag.Parse()
 
-	fmt.Println(*urlFlag)
-	resp, err := http.Get(*urlFlag)
+	pages := bfs(*urlFlag, *maxDepth)
+
+	for _, page := range pages {
+		fmt.Println(page)
+	}
+}
+
+func bfs(urlStr string, maxDepth int) []string {
+	seen := make(map[string]struct{})
+	var q map[string]struct{}
+	// adding our initial url to seen, map literal
+	nq := map[string]struct{}{
+		urlStr: {},
+	}
+
+	for i := 0; i <= maxDepth; i++ {
+		q, nq = nq, make(map[string]struct{})
+		for url, _ := range q {
+			if _, ok := seen[url]; ok {
+				continue
+			}
+			seen[url] = struct{}{}
+			for _, link := range get(url) {
+				nq[link] = struct{}{}
+			}
+		}
+	}
+	ret := make([]string, 0, len(seen))
+	for url := range seen {
+		ret = append(ret, url)
+	}
+	return ret
+}
+
+func get(urlStr string) []string {
+	resp, err := http.Get(urlStr)
 	if err != nil {
-		panic(err)
+		return []string{}
 	}
 	defer resp.Body.Close()
-
-	/*
-	 /some-path
-	 https://gophercises.com/some-path
-	 #fragment
-	 mailto:seraphim@jaz.codes
-	*/
-
-	// We are using the url from our request because we might have been redirected
 	reqUrl := resp.Request.URL
 	baseUrl := &url.URL{
 		Scheme: reqUrl.Scheme,
 		Host:   reqUrl.Host,
 	}
 	base := baseUrl.String()
+	return filter(hrefs(resp.Body, base), withPrefix(base))
+}
 
-	for _, href := range hrefs {
-		fmt.Println(href)
+func filter(links []string, keepFn func(string) bool) []string {
+	var ret []string
+	for _, link := range links {
+		if keepFn(link) {
+			ret = append(ret, link)
+		}
 	}
+	return ret
+}
 
+func withPrefix(pfx string) func(string) bool {
+	return func(link string) bool {
+		return strings.HasPrefix(link, pfx)
+	}
 }
 
 func hrefs(r io.Reader, base string) []string {
@@ -61,4 +99,5 @@ func hrefs(r io.Reader, base string) []string {
 			hrefs = append(hrefs, l.Href)
 		}
 	}
+	return hrefs
 }
