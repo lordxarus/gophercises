@@ -6,7 +6,7 @@ import (
 	"sort"
 	"time"
 
-	"golang.org/x/exp/rand"
+	"math/rand"
 )
 
 type Suit uint8
@@ -104,22 +104,26 @@ func absRank(c Card) int {
 	return int(c.Suit)*int(maxRank) + int(c.Rank)
 }
 
+// John makes this a package level variable so we can just set
+// it from our tests
+var shuffleRand = rand.New(rand.NewSource(time.Now().Unix()))
+
 // We're not shuffling inline, like Sort(), for simplicity's sake
 func Shuffle(cards []Card) []Card {
 	ret := make([]Card, len(cards))
-	r := rand.New(rand.NewSource(uint64(time.Now().Unix())))
 	// Perm(5)
 	// [0, 4, 2, 1, 3]
 
 	// We use these elements to index into ret slice.
 	// And set ret[i] to the card value at the
 	// idx j of the cards slice
-	perm := r.Perm(len(cards))
+	perm := shuffleRand.Perm(len(cards))
 	for i, j := range perm {
 		ret[i] = cards[j]
 	}
 
 	return ret
+
 }
 
 //
