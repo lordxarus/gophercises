@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"fmt"
+	"gophercises/task/db"
 	"strconv"
 
 	"github.com/spf13/cobra"
@@ -24,7 +25,28 @@ var doCmd = &cobra.Command{
 				ids = append(ids, id)
 			}
 		}
-		fmt.Printf("%+v\n", ids)
+
+		tasks, err := db.AllTasks()
+		if err != nil {
+			fmt.Println("Something went wrong fetching tasks:", err)
+		}
+
+		for _, id := range ids {
+			// our tasks start at idx 1
+			if id <= 0 || id > len(tasks) {
+				fmt.Println("invalid task number:", id)
+				continue
+			}
+			// convert to zero based idx
+			task := tasks[id-1]
+			err = db.DeleteTask(task.Key)
+			if err != nil {
+				fmt.Printf("Error: %s occured while marking \"%d\" as complete\n", err, id)
+			} else {
+				fmt.Printf("Marked \"%d\" as complete\n", id)
+			}
+
+		}
 	},
 }
 
