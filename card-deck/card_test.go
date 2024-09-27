@@ -81,7 +81,7 @@ func TestDeck(t *testing.T) {
 	}
 }
 
-func TestShuff(t *testing.T) {
+func TestShuffle(t *testing.T) {
 	// make shuffleRand deterministic
 	// first call to shuffleRand.Perm(52) should be:
 	// [40, 35, ...]
