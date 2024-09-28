@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"gophercises/html-link-parser/test-html/link"
+	"gophercises/html-link-parser/link"
 	"strings"
 )
 
