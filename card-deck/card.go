@@ -49,6 +49,8 @@ type Card struct {
 	Rank
 }
 
+type DeckOpt func([]Card) []Card
+
 func (c Card) String() string {
 	if c.Suit == Joker {
 		return c.Suit.String()
@@ -59,7 +61,7 @@ func (c Card) String() string {
 // functional options, or as I prefer to
 // call them. Functional operators
 
-func New(opts ...func([]Card) []Card) []Card {
+func New(opts ...DeckOpt) []Card {
 	var cards []Card
 	for _, suit := range suits {
 		for rank := minRank; rank <= maxRank; rank++ {
@@ -81,7 +83,7 @@ func DefaultSort(cards []Card) []Card {
 }
 
 // Create a sorter based with lessFn logic
-func Sort(lessFn func(cards []Card) func(i, j int) bool) func([]Card) []Card {
+func Sort(lessFn func(cards []Card) func(i, j int) bool) DeckOpt {
 	return func(cards []Card) []Card {
 		// We capture lessFn with the closure
 		// This part looks identical to DefaultSort
@@ -93,6 +95,7 @@ func Sort(lessFn func(cards []Card) func(i, j int) bool) func([]Card) []Card {
 
 // i and j are indices into cards
 func Less(cards []Card) func(i, j int) bool {
+	// capture cards with a closure and return it
 	return func(i, j int) bool {
 		return absRank(cards[i]) < absRank(cards[j])
 	}
@@ -139,7 +142,7 @@ loops over n
 
 
 */
-func Jokers(n int) func(cards []Card) []Card {
+func Jokers(n int) DeckOpt {
 	return func(cards []Card) []Card {
 		for i := 0; i < n; i++ {
 			cards = append(cards, Card{
@@ -151,7 +154,7 @@ func Jokers(n int) func(cards []Card) []Card {
 	}
 }
 
-func Filter(f func(card Card) bool) func([]Card) []Card {
+func Filter(f func(card Card) bool) DeckOpt {
 	return func(cards []Card) []Card {
 		var ret []Card
 		for _, c := range cards {
@@ -163,7 +166,7 @@ func Filter(f func(card Card) bool) func([]Card) []Card {
 	}
 }
 
-func Deck(n int) func(cards []Card) []Card {
+func Clone(n int) DeckOpt {
 	return func(cards []Card) []Card {
 		var ret []Card
 		for i := 0; i < n; i++ {
