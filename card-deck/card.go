@@ -118,7 +118,7 @@ func Shuffle(cards []Card) []Card {
 	// [0, 4, 2, 1, 3]
 
 	// We use these elements to index into ret slice.
-	// And set ret[i] to the card value at the
+	// And set ret[i] to the card value at
 	// idx j of the cards slice
 	perm := shuffleRand.Perm(len(cards))
 	for i, j := range perm {
