@@ -13,22 +13,51 @@ const (
 	stateHandOver
 )
 
-func New() Game {
-	return Game{
+func New(opts Options) Game {
+	g := Game{
 		state:   statePlayerTurn,
 		pDealer: dealerPlayer{},
 		balance: 0,
 	}
+	if opts.Decks == 0 {
+		opts.Decks = 3
+	}
+
+	if opts.Hands == 0 {
+		opts.Hands = 100
+	}
+
+	if opts.BlackjackPayout == 0 {
+		opts.BlackjackPayout = 1.5
+	}
+
+	g.nDeck = opts.Decks
+	g.nHand = opts.Decks
+	g.blackjackPayout = opts.BlackjackPayout
+
+	return g
 }
 
+type Options struct {
+	Decks           int
+	Hands           int
+	BlackjackPayout float64
+}
 type Game struct {
 	// unexported fields
-	deck    []deck.Card
-	state   state
-	player  []deck.Card
+	nDeck           int
+	nHand           int
+	blackjackPayout float64
+
+	deck  []deck.Card
+	state state
+
+	player    []deck.Card
+	playerBet int
+	balance   int
+
 	dealer  []deck.Card
 	pDealer Player
-	balance int
 }
 
 func (g *Game) currentHand() *[]deck.Card {
@@ -43,9 +72,15 @@ func (g *Game) currentHand() *[]deck.Card {
 }
 
 func (g *Game) Play(p Player) int {
-	g.deck = deck.New(deck.Clone(3), deck.Shuffle)
-
-	for i := 0; i < 10; i++ {
+	g.deck = nil
+	min := (52 * g.nDeck) / 3
+	for i := 0; i < g.nHand; i++ {
+		shuffled := false
+		if len(g.deck) < min {
+			g.deck = deck.New(deck.Clone(g.nDeck), deck.Shuffle)
+			shuffled = true
+		}
+		bet(g, p, shuffled)
 		deal(g)
 		for g.state == statePlayerTurn {
 			// protect the hand
@@ -65,22 +100,6 @@ func (g *Game) Play(p Player) int {
 	return g.balance
 }
 
-type Move func(*Game)
-
-func MoveHit(g *Game) {
-	hand := g.currentHand()
-	var card deck.Card
-	card, g.deck = draw(g.deck)
-	*hand = append(*hand, card)
-	if Score(*hand...) > 21 {
-		MoveStand(g)
-	}
-}
-
-func MoveStand(g *Game) {
-	g.state++
-}
-
 func draw(cards []deck.Card) (deck.Card, []deck.Card) {
 	return cards[0], cards[1:]
 }
@@ -98,25 +117,32 @@ func deal(g *Game) {
 	g.state = statePlayerTurn
 }
 
+func bet(g *Game, p Player, shuffled bool) {
+	bet := p.Bet(shuffled)
+	g.playerBet = bet
+}
+
 func endHand(g *Game, p Player) {
 	pScore, dScore := Score(g.player...), Score(g.dealer...)
 	// TODO: Figure out winnings and add / subtract them
+	winnings := g.playerBet
 	switch {
 	case pScore > 21:
 		fmt.Println("You busted")
-		g.balance--
+		winnings = -winnings
 	case dScore > 21:
 		fmt.Println("Dealer busted")
-		g.balance++
 	case pScore > dScore:
 		fmt.Println("You win!")
 		g.balance++
 	case dScore > pScore:
 		fmt.Println("You lose")
-		g.balance--
+		winnings = -winnings
 	case dScore == pScore:
 		fmt.Println("Draw")
+		winnings = 0
 	}
+	g.balance += winnings
 	fmt.Println()
 	p.Results([][]deck.Card{g.player}, g.dealer)
 	g.player = nil
@@ -157,4 +183,20 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+type Move func(*Game)
+
+func MoveHit(g *Game) {
+	hand := g.currentHand()
+	var card deck.Card
+	card, g.deck = draw(g.deck)
+	*hand = append(*hand, card)
+	if Score(*hand...) > 21 {
+		MoveStand(g)
+	}
+}
+
+func MoveStand(g *Game) {
+	g.state++
 }

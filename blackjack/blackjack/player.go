@@ -6,7 +6,7 @@ import (
 )
 
 type Player interface {
-	Bet() int
+	Bet(shuffled bool) int
 	Play(hand []deck.Card, dealer deck.Card) Move
 	Results(hand [][]deck.Card, dealer []deck.Card)
 }
@@ -28,7 +28,7 @@ func (d dealerPlayer) Play(hand []deck.Card, dealer deck.Card) Move {
 	}
 }
 
-func (p dealerPlayer) Bet() int {
+func (p dealerPlayer) Bet(shuffled bool) int {
 	return 1
 }
 
@@ -52,11 +52,13 @@ func (p humanPlayer) Play(hand []deck.Card, dealer deck.Card) Move {
 			fmt.Println("invalid option: ", input)
 		}
 	}
-
 }
 
-func (p humanPlayer) Bet() int {
-	return 1
+func (p humanPlayer) Bet(shuffled bool) int {
+	fmt.Println("What would you like to bet?")
+	var bet int
+	fmt.Scanf("%d\n", &bet)
+	return bet
 }
 
 func (p humanPlayer) Results(hand [][]deck.Card, dealer []deck.Card) {
@@ -65,5 +67,4 @@ func (p humanPlayer) Results(hand [][]deck.Card, dealer []deck.Card) {
 
 	fmt.Println("Player: ", hand)
 	fmt.Println("Dealer: ", dealer)
-
 }
